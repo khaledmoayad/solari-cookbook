@@ -78,6 +78,8 @@ directory, or per-stage timeout. Run `npm start -- --help` for the full CLI.
 Commands in the contract run only inside disposable sandboxes. PatchProof
 accepts public `github.com` repositories and exact commits; moving branches,
 embedded credentials, and repository paths that escape the checkout are rejected.
+Base and head run sequentially on 1-vCPU/2-GB sandboxes, and each sandbox is
+destroyed before PatchProof polls for the asynchronously uploaded replay.
 
 ## Proof bundle
 

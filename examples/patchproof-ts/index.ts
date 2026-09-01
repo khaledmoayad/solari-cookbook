@@ -437,8 +437,8 @@ async function runRevision(
     sandbox = await step("Create isolated sandbox", () =>
       platform.sandboxes.create({
         template: "base",
-        cpu: 2,
-        memMb: 4_096,
+        cpu: 1,
+        memMb: 2_048,
         timeoutMs: config.timeoutMs + 120_000,
         lifecycle: { onTimeout: "kill" },
       }),
@@ -582,6 +582,17 @@ async function runRevision(
         return actual as JsonPrimitive
       },
       (actual) => `${contract.journey.oracle.field} = ${JSON.stringify(actual)}`,
+    )
+
+    await step(
+      "Release isolated sandbox",
+      async () => {
+        if (server) await server.kill()
+        server = undefined
+        if (sandbox) await sandbox.kill()
+        sandbox = undefined
+      },
+      () => "server stopped, sandbox destroyed",
     )
 
     await step(
