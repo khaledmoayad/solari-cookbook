@@ -9,6 +9,12 @@ past. Copy one into your project and change the parts you care about.
 
 ## Examples
 
+### End-to-end workflows
+
+| Example | Language | What it shows |
+| --- | --- | --- |
+| [patchproof-ts](examples/patchproof-ts) | TypeScript | Prove a patch by comparing immutable base/head workflows, state oracles, and recorded evidence |
+
 ### Cloud browser
 
 | Example | Language | What it shows |

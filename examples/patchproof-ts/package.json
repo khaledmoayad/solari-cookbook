@@ -1,0 +1,18 @@
+{
+  "name": "solari-patchproof-ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit && tsx --test test.ts",
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@solarisdk/browser": "^0.1.2",
+    "@solarisdk/sdk": "^0.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

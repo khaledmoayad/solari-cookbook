@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synthetic claims desk</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; color: #ecf4ee; background: #07110d; }
+      body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(circle at 80% 0%, #164b344d, transparent 38%), linear-gradient(135deg, #ffffff05, transparent 45%); }
+      main { width: min(980px, calc(100% - 40px)); margin: 0 auto; padding: 52px 0 80px; position: relative; }
+      header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 54px; }
+      .brand { display: flex; gap: 12px; align-items: center; font-weight: 720; letter-spacing: -.02em; }
+      .mark { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #07110d; background: #9ef0bd; box-shadow: 0 0 36px #58d99442; }
+      .pill { border: 1px solid #95cca828; border-radius: 999px; padding: 7px 11px; color: #9fb5a7; font-size: 12px; }
+      .eyebrow { color: #8ddcac; font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+      h1 { max-width: 680px; margin: 14px 0 12px; font-size: clamp(38px, 7vw, 66px); line-height: .98; letter-spacing: -.055em; }
+      .lede { max-width: 600px; color: #93a99c; font-size: 17px; line-height: 1.55; }
+      .case { margin-top: 42px; border: 1px solid #b7dfc620; border-radius: 22px; overflow: hidden; background: #0d1a14d9; box-shadow: 0 28px 90px #0007; backdrop-filter: blur(16px); }
+      .case-head { display: flex; justify-content: space-between; gap: 20px; padding: 25px 28px; border-bottom: 1px solid #b7dfc616; }
+      .case-title { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+      .case-sub { margin-top: 6px; color: #80988a; font-size: 13px; }
+      .status { align-self: flex-start; color: #d5b971; background: #d5b97114; border: 1px solid #d5b97133; border-radius: 999px; padding: 7px 10px; font-size: 12px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .datum { padding: 24px 28px 26px; border-right: 1px solid #b7dfc612; }
+      .datum:last-child { border-right: 0; }
+      .label { color: #71887b; font-size: 12px; margin-bottom: 9px; }
+      .value { font-size: 17px; font-weight: 650; }
+      .action { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 28px; background: #ffffff03; border-top: 1px solid #b7dfc612; }
+      #message { color: #93a99c; font-size: 13px; }
+      button { border: 0; border-radius: 12px; padding: 13px 18px; background: #9ef0bd; color: #07110d; font: inherit; font-weight: 760; cursor: pointer; box-shadow: 0 8px 26px #62df9830; }
+      button:hover { background: #b6f7cd; }
+      button:disabled { opacity: .65; cursor: wait; }
+      footer { margin-top: 18px; color: #557064; font-size: 12px; }
+      @media (max-width: 680px) { main { width: min(100% - 24px, 980px); padding-top: 28px; } header { margin-bottom: 36px; } .grid { grid-template-columns: 1fr; } .datum { border-right: 0; border-bottom: 1px solid #b7dfc612; } .action { align-items: stretch; flex-direction: column; } button { width: 100%; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand"><span class="mark">P</span> PatchProof</div>
+        <span class="pill">Synthetic data only</span>
+      </header>
+      <section>
+        <div class="eyebrow">Claims operations · causal verification</div>
+        <h1>The screen can pass while the system fails.</h1>
+        <p class="lede">This fixture looks successful in both revisions. PatchProof checks the state behind it, so a missing audit event cannot hide behind a green UI.</p>
+      </section>
+      <section class="case" aria-labelledby="case-title">
+        <div class="case-head">
+          <div>
+            <div class="case-title" id="case-title">Authorization PA-1842</div>
+            <div class="case-sub">Synthetic outpatient imaging request</div>
+          </div>
+          <span class="status" id="status">Pending review</span>
+        </div>
+        <div class="grid">
+          <div class="datum"><div class="label">Requested amount</div><div class="value">$1,240.00</div></div>
+          <div class="datum"><div class="label">Procedure</div><div class="value">MRI · knee</div></div>
+          <div class="datum"><div class="label">Policy check</div><div class="value">Criteria met</div></div>
+        </div>
+        <div class="action">
+          <span id="message" aria-live="polite">Ready for reviewer decision</span>
+          <button id="approve" type="button">Approve authorization</button>
+        </div>
+      </section>
+      <footer>No patient or production data is used in this demonstration.</footer>
+    </main>
+    <script>
+      const button = document.querySelector("#approve")
+      const status = document.querySelector("#status")
+      const message = document.querySelector("#message")
+      button.addEventListener("click", async () => {
+        button.disabled = true
+        const response = await fetch("/api/approve", { method: "POST" })
+        if (!response.ok) throw new Error(`approval failed: ${response.status}`)
+        status.textContent = "Approved"
+        status.style.color = "#9ef0bd"
+        message.textContent = "Authorization approved"
+        button.textContent = "Approved"
+      })
+    </script>
+  </body>
+</html>

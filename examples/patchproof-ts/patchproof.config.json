@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "workdir": "examples/patchproof-ts/fixture",
+  "setup": "true",
+  "start": "node server.mjs",
+  "port": 3000,
+  "journey": {
+    "name": "approving a synthetic authorization writes exactly one audit event",
+    "path": "/",
+    "click": {
+      "role": "button",
+      "name": "Approve authorization"
+    },
+    "expectText": "Authorization approved",
+    "oracle": {
+      "path": "/api/case",
+      "field": "auditEvents",
+      "baseEquals": 0,
+      "headEquals": 1
+    }
+  },
+  "guardrails": [
+    "Synthetic data only",
+    "Authorization PA-1842",
+    "Requested amount",
+    "$1,240.00"
+  ]
+}
