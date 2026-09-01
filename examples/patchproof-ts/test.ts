@@ -1,5 +1,8 @@
 import assert from "node:assert/strict"
+import { spawn } from "node:child_process"
+import { once } from "node:events"
 import test from "node:test"
+import { fileURLToPath } from "node:url"
 
 import {
   formatMarkdown,
@@ -81,6 +84,39 @@ test("requires an oracle state change", () => {
 test("resolves a dotted oracle field", () => {
   assert.equal(resolveField({ audit: { events: 1 } }, "audit.events"), 1)
   assert.equal(resolveField({ audit: {} }, "audit.events"), undefined)
+})
+
+test("fixture persists exactly one audit event", async (context) => {
+  const port = 41_842
+  const directory = fileURLToPath(new URL(".", import.meta.url))
+  const fixture = spawn(process.execPath, ["fixture/server.mjs"], {
+    cwd: directory,
+    env: { ...process.env, HOST: "127.0.0.1", PORT: String(port) },
+    stdio: "ignore",
+  })
+  context.after(() => {
+    if (fixture.exitCode === null) fixture.kill()
+  })
+
+  const url = `http://127.0.0.1:${port}`
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try {
+      const response = await fetch(url)
+      if (response.ok) break
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+  }
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(`${url}/api/approve`, { method: "POST" })
+    assert.equal(response.status, 200)
+  }
+  const state = await (await fetch(`${url}/api/case`)).json()
+  assert.deepEqual(state, { authorization: "approved", auditEvents: 1 })
+
+  fixture.kill()
+  await once(fixture, "exit")
 })
 
 test("formats content-addressed evidence without session capabilities", () => {
