@@ -1,0 +1,60 @@
+name: PatchProof
+description: Prove a pull request with isolated base/head runs, a recorded browser journey, and a state oracle.
+
+inputs:
+  solari-api-key:
+    description: Solari API key stored as a GitHub Actions secret.
+    required: true
+  repo:
+    description: Public GitHub HTTPS repository URL.
+    required: true
+  base:
+    description: Exact 40-character base commit.
+    required: true
+  head:
+    description: Exact 40-character head commit.
+    required: true
+  contract:
+    description: Repository-relative PatchProof contract path.
+    required: false
+    default: patchproof.config.json
+  timeout:
+    description: Per-stage timeout in seconds.
+    required: false
+    default: "120"
+
+outputs:
+  proof-directory:
+    description: Absolute directory containing REPORT.md, report.json, screenshots, replays, and logs.
+    value: ${{ steps.run.outputs.directory }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Install PatchProof
+      shell: bash
+      run: npm install --prefix "$GITHUB_ACTION_PATH"
+    - name: Run causal proof
+      id: run
+      shell: bash
+      env:
+        SOLARI_API_KEY: ${{ inputs.solari-api-key }}
+        PATCHPROOF_REPO: ${{ inputs.repo }}
+        PATCHPROOF_BASE: ${{ inputs.base }}
+        PATCHPROOF_HEAD: ${{ inputs.head }}
+        PATCHPROOF_CONTRACT: ${{ github.workspace }}/${{ inputs.contract }}
+        PATCHPROOF_TIMEOUT: ${{ inputs.timeout }}
+      run: |
+        proof_directory="$RUNNER_TEMP/patchproof"
+        echo "directory=$proof_directory" >> "$GITHUB_OUTPUT"
+        npm --prefix "$GITHUB_ACTION_PATH" start -- \
+          --repo "$PATCHPROOF_REPO" \
+          --base "$PATCHPROOF_BASE" \
+          --head "$PATCHPROOF_HEAD" \
+          --contract "$PATCHPROOF_CONTRACT" \
+          --timeout "$PATCHPROOF_TIMEOUT" \
+          --output "$proof_directory"

@@ -108,3 +108,37 @@ npm audit --audit-level=high
 
 Source: [`index.ts`](index.ts). The implementation uses only Node’s standard
 library plus the two official Solari SDKs.
+
+## Gate a pull request
+
+PatchProof is also a composite GitHub Action. Put the contract at the repository
+root, store the key as `SOLARI_API_KEY`, and pass GitHub's immutable pull-request
+commits:
+
+```yaml
+name: Prove patch
+on: pull_request
+
+jobs:
+  patchproof:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - id: proof
+        uses: khaledmoayad/solari-cookbook/examples/patchproof-ts@feat/patchproof
+        with:
+          solari-api-key: ${{ secrets.SOLARI_API_KEY }}
+          repo: ${{ github.server_url }}/${{ github.repository }}.git
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: patchproof
+          path: ${{ steps.proof.outputs.proof-directory }}
+```
+
+The key is passed only to the local Solari clients. It is not injected into
+either sandbox or written to the proof bundle.
