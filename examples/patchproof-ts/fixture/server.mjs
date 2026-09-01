@@ -30,9 +30,8 @@ const server = createServer((request, response) => {
   }
 
   if (request.method === "POST" && request.url === "/api/approve") {
+    if (state.authorization !== "approved") state.auditEvents += 1
     state.authorization = "approved"
-    // Baseline bug: the screen reports success but the required audit event is
-    // never persisted. The follow-up commit fixes exactly this line of behavior.
     response.writeHead(200, { "content-type": "application/json" })
     response.end(JSON.stringify(state))
     return
