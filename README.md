@@ -1,4 +1,38 @@
-# Solari Cookbook
+<div align="center">
+
+# PatchProof
+
+### The screenshot passed. The patch did not.
+
+[How it works](examples/patchproof-ts) · [Proof contract](examples/patchproof-ts/patchproof.config.json) · [Inspect the fix](https://github.com/khaledmoayad/solari-cookbook/compare/ddf6bb3303508d8c981328d3128b22780a1de039...582715e93c7b14fd012cafeacb515d0d12206d78)
+
+</div>
+
+PatchProof proves that one exact code change caused one exact behavior. It runs
+the same accessible browser journey against immutable base and head commits in
+separate Solari sandboxes, records both sessions, checks the visible UI, and
+queries a machine-readable state oracle before emitting a hashed receipt.
+
+The included synthetic authorization screen reports success in both revisions.
+The base silently drops the required audit event; the head persists exactly one.
+A screenshot cannot tell them apart. PatchProof can.
+
+```text
+base SHA ──> isolated app ──> recorded journey ──> auditEvents = 0
+                                                       │
+head SHA ──> isolated app ──> same journey ─────> auditEvents = 1
+                                                       │
+                                                       ▼
+                                  commit-bound, content-addressed receipt
+```
+
+The build is intentionally narrow: it does not certify an entire repository.
+It answers the causal question a reviewer actually has—**did this patch produce
+the state change its author promised without losing the visible guardrails?**
+
+---
+
+## Solari Cookbook
 
 Short, runnable examples for [Solari](https://getsolari.com) — cloud browsers,
 sandboxes, and desktops behind one API key.
