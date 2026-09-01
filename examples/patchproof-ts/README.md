@@ -125,7 +125,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: proof
         uses: khaledmoayad/solari-cookbook/examples/patchproof-ts@feat/patchproof
         with:
@@ -133,7 +133,7 @@ jobs:
           repo: ${{ github.server_url }}/${{ github.repository }}.git
           base: ${{ github.event.pull_request.base.sha }}
           head: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: patchproof
