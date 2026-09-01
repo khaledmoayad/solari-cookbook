@@ -4,6 +4,8 @@
 
 ### The screenshot passed. The patch did not.
 
+[![PatchProof checks](https://github.com/khaledmoayad/solari-cookbook/actions/workflows/patchproof.yml/badge.svg)](https://github.com/khaledmoayad/solari-cookbook/actions/workflows/patchproof.yml)
+
 [How it works](examples/patchproof-ts) · [Proof contract](examples/patchproof-ts/patchproof.config.json) · [Inspect the fix](https://github.com/khaledmoayad/solari-cookbook/compare/ddf6bb3303508d8c981328d3128b22780a1de039...582715e93c7b14fd012cafeacb515d0d12206d78)
 
 </div>

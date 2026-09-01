@@ -1,0 +1,30 @@
+name: PatchProof checks
+
+on:
+  push:
+    paths:
+      - ".github/workflows/patchproof.yml"
+      - "examples/patchproof-ts/**"
+  pull_request:
+    paths:
+      - ".github/workflows/patchproof.yml"
+      - "examples/patchproof-ts/**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: examples/patchproof-ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run check
+      - run: npm audit --audit-level=high
