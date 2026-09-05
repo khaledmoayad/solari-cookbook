@@ -6,13 +6,14 @@
  * a JSON oracle checks the state behind the screen.
  */
 import { createHash } from "node:crypto"
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { isDeepStrictEqual, parseArgs } from "node:util"
 
 import { Solari, SolariError } from "@solarisdk/browser"
 import { SolariClient } from "@solarisdk/sdk"
+import { chromium } from "patchright-core"
 
 const APP_DIR = "/tmp/patchproof-app"
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -154,7 +155,7 @@ export function parseContract(value: unknown): Contract {
   const normalizedWorkdir = path.posix.normalize(workdir)
   if (
     path.posix.isAbsolute(workdir) ||
-    normalizedWorkdir === "." ||
+    normalizedWorkdir === ".." ||
     normalizedWorkdir.startsWith("../") ||
     normalizedWorkdir !== workdir.replace(/\/$/, "")
   ) {
@@ -176,11 +177,11 @@ export function parseContract(value: unknown): Contract {
   }
 
   const pathname = string(journey.path, "contract.journey.path")
-  if (!pathname.startsWith("/")) throw new Error("contract.journey.path must start with /")
+  targetUrl("https://patchproof.invalid", pathname)
 
   const oracle = object(journey.oracle, "contract.journey.oracle")
   const oraclePath = string(oracle.path, "contract.journey.oracle.path")
-  if (!oraclePath.startsWith("/")) throw new Error("contract.journey.oracle.path must start with /")
+  targetUrl("https://patchproof.invalid", oraclePath)
   const field = string(oracle.field, "contract.journey.oracle.field")
   if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(field)) {
     throw new Error("contract.journey.oracle.field must be a dotted object path")
@@ -277,11 +278,23 @@ export function readConfig(argv: string[]): Config | "help" {
   }
 }
 
-function safeError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error)
-  return message
+export function sanitizeText(text: string): string {
+  return text
     .replace(/slr_(?:live|test)_[A-Za-z0-9_-]+/g, "[REDACTED_API_KEY]")
-    .replace(/https:\/\/[^\s]+\.preview\.getsolari\.com[^\s]*/g, "[REDACTED_PREVIEW_URL]")
+    .replace(/(?:https?|wss?):\/\/[^\s"'<>]*getsolari\.com[^\s"'<>]*/g, "https://preview.invalid/")
+    .replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, "[REDACTED_SESSION_ID]")
+}
+
+function safeError(error: unknown): string {
+  return sanitizeText(error instanceof Error ? error.message : String(error))
+}
+
+export function sanitizeReplay(bytes: Uint8Array): string {
+  const events = Buffer.from(bytes).toString("utf8").trim().split("\n").map((line) =>
+    JSON.parse(line, (_key, value: unknown) => typeof value === "string" ? sanitizeText(value) : value),
+  )
+  if (!events.some((event) => event?.type === 2)) throw new Error("Replay contains no DOM snapshot")
+  return `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
 }
 
 function tail(text: string, max = 4_000): string {
@@ -305,6 +318,7 @@ async function verifyAncestry(repo: string, base: string, head: string): Promise
         "user-agent": "solari-patchproof",
         "x-github-api-version": "2022-11-28",
       },
+      signal: AbortSignal.timeout(15_000),
     },
   )
   if (!response.ok) throw new Error(`GitHub ancestry check returned HTTP ${response.status}`)
@@ -331,9 +345,13 @@ async function waitForPreview(url: string, timeoutMs: number): Promise<number> {
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url, { redirect: "follow" })
+      const response = await fetch(url, {
+        redirect: "error",
+        signal: AbortSignal.timeout(Math.max(1, Math.min(5_000, deadline - Date.now()))),
+      })
       last = `HTTP ${response.status}`
-      if (response.status < 500) return response.status
+      await response.body?.cancel()
+      if (response.ok) return response.status
     } catch (error) {
       last = safeError(error)
     }
@@ -356,9 +374,13 @@ async function downloadReplay(client: Solari, sessionId: string): Promise<Uint8A
   throw new Error("browser replay was not available after 30 seconds")
 }
 
-function targetUrl(previewUrl: string, pathname: string): string {
+export function targetUrl(previewUrl: string, pathname: string): string {
+  if (!pathname.startsWith("/") || pathname.startsWith("//") || /[\\\u0000-\u0020]/.test(pathname)) {
+    throw new Error("Journey and oracle paths must be same-origin paths starting with a single /")
+  }
   const preview = new URL(previewUrl)
   const target = new URL(pathname, preview)
+  if (target.origin !== preview.origin) throw new Error("Journey and oracle paths must remain same-origin")
   for (const [key, value] of preview.searchParams) target.searchParams.append(key, value)
   return target.toString()
 }
@@ -400,12 +422,9 @@ async function runRevision(
 
   const output = path.join(config.output, label)
   await mkdir(output, { recursive: true })
-  await Promise.all(
-    ["screenshot.png", "replay.ndjson"].map((file) => rm(path.join(output, file), { force: true })),
-  )
-
   let sandbox: Awaited<ReturnType<typeof platform.sandboxes.create>> | undefined
-  let browser: Awaited<ReturnType<typeof browserClient.launch>> | undefined
+  let browser: Awaited<ReturnType<typeof chromium.connectOverCDP>> | undefined
+  let session: Awaited<ReturnType<typeof browserClient.sessions.create>> | undefined
   let server: Awaited<ReturnType<NonNullable<typeof sandbox>["commands"]["start"]>> | undefined
   let setupLog = ""
   let appLog = ""
@@ -516,10 +535,15 @@ async function runRevision(
     const sessionId = await step(
       "Run recorded browser journey",
       async () => {
-        browser = await browserClient.launch({ recording: true, retries: 2, probe: true })
-        const id = browser.id
+        session = await browserClient.sessions.create({ recording: true })
+        // Solari records the default CDP context. The wire-protocol connection
+        // exposed no default context and produced no replay in the live check.
+        browser = await chromium.connectOverCDP(session.cdpEndpoint, { timeout: Math.min(config.timeoutMs, 60_000) })
+        const id = session.id
         try {
-          const page = await browser.newPage()
+          const context = browser.contexts()[0]
+          if (!context) throw new Error("Recorded default browser context is unavailable")
+          const page = await context.newPage()
           const response = await page.goto(targetUrl(previewUrl, contract.journey.path), {
             waitUntil: "domcontentloaded",
             timeout: Math.min(config.timeoutMs, 60_000),
@@ -554,8 +578,13 @@ async function runRevision(
           report.screenshotCaptured = true
           return id
         } finally {
-          await browser.close()
+          try {
+            await browser.close()
+          } finally {
+            await browserClient.sessions.releaseAndWait(id)
+          }
           browser = undefined
+          session = undefined
         }
       },
       () => `HTTP ${report.httpStatus}, visible workflow captured`,
@@ -564,7 +593,10 @@ async function runRevision(
     await step(
       "Read state oracle",
       async () => {
-        const response = await fetch(targetUrl(previewUrl, contract.journey.oracle.path))
+        const response = await fetch(targetUrl(previewUrl, contract.journey.oracle.path), {
+          redirect: "error",
+          signal: AbortSignal.timeout(Math.min(config.timeoutMs, 30_000)),
+        })
         if (!response.ok) throw new Error(`oracle returned HTTP ${response.status}`)
         const payload: unknown = await response.json()
         const actual = resolveField(payload, contract.journey.oracle.field)
@@ -599,9 +631,10 @@ async function runRevision(
       "Download audit replay",
       async () => {
         const replay = await downloadReplay(browserClient, sessionId)
-        await writeFile(path.join(output, "replay.ndjson"), replay)
+        const sanitized = sanitizeReplay(replay)
+        await writeFile(path.join(output, "replay.ndjson"), sanitized)
         report.replayCaptured = true
-        return replay.length
+        return Buffer.byteLength(sanitized)
       },
       (bytes) => `${bytes.toLocaleString()} bytes`,
     )
@@ -611,10 +644,11 @@ async function runRevision(
     report.error = safeError(error)
   } finally {
     if (browser) await browser.close().catch(() => undefined)
+    if (session) await browserClient.sessions.releaseAndWait(session.id).catch(() => undefined)
     if (server) await server.kill().catch(() => undefined)
     if (sandbox) await sandbox.kill().catch(() => undefined)
-    await writeFile(path.join(output, "setup.log"), setupLog)
-    await writeFile(path.join(output, "app.log"), appLog)
+    await writeFile(path.join(output, "setup.log"), sanitizeText(setupLog))
+    await writeFile(path.join(output, "app.log"), sanitizeText(appLog))
   }
 
   return report
@@ -732,6 +766,9 @@ Generated at ${report.finishedAt}. Ephemeral Solari session IDs, preview URLs, a
 
 export async function run(config: Config, apiKey: string): Promise<ProofReport> {
   await mkdir(config.output, { recursive: true })
+  if ((await readdir(config.output)).length !== 0) {
+    throw new Error("Output directory must be empty; choose a new --output so earlier evidence is preserved")
+  }
   const contractBytes = await readFile(config.contractPath)
   const contract = parseContract(JSON.parse(contractBytes.toString("utf8")))
   const started = Date.now()

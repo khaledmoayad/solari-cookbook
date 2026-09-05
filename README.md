@@ -6,17 +6,17 @@
 
 [![PatchProof checks](https://github.com/khaledmoayad/solari-cookbook/actions/workflows/patchproof.yml/badge.svg)](https://github.com/khaledmoayad/solari-cookbook/actions/workflows/patchproof.yml)
 
-[How it works](examples/patchproof-ts) · [Proof contract](examples/patchproof-ts/patchproof.config.json) · [Inspect the fix](https://github.com/khaledmoayad/solari-cookbook/compare/ddf6bb3303508d8c981328d3128b22780a1de039...582715e93c7b14fd012cafeacb515d0d12206d78)
+[Live cloud results](examples/patchproof-ts/evidence/2026-09-05/REPORT.md) · [Run it yourself](examples/patchproof-ts) · [Inspect the fix](https://github.com/khaledmoayad/solari-cookbook/compare/ddf6bb3303508d8c981328d3128b22780a1de039...582715e93c7b14fd012cafeacb515d0d12206d78)
 
 </div>
 
-PatchProof proves that one exact code change caused one exact behavior. It runs
+PatchProof checks a declared behavior change between two exact commits. It runs
 the same accessible browser journey against immutable base and head commits in
 separate Solari sandboxes, records both sessions, checks the visible UI, and
 queries a machine-readable state oracle before emitting a hashed receipt.
 
 The included synthetic authorization screen reports success in both revisions.
-The base silently drops the required audit event; the head persists exactly one.
+The base silently drops the required audit event; the head records exactly one.
 A screenshot cannot tell them apart. PatchProof can.
 
 ```text
@@ -29,8 +29,28 @@ head SHA ──> isolated app ──> same journey ─────> auditEvents 
 ```
 
 The build is intentionally narrow: it does not certify an entire repository.
-It answers the causal question a reviewer actually has—**did this patch produce
-the state change its author promised without losing the visible guardrails?**
+It asks a practical review question: **did the same action produce the declared
+state change, with the visible guardrails still present?** The fixture uses an
+in-memory counter, not a production database. Its app-provided oracle is trusted;
+this is an executable regression check, not a security certification.
+
+## Real Solari run · September 5, 2026
+
+**Passed in 49.9 seconds.** Two disposable Solari sandboxes, two recorded Solari
+browser sessions, one real click in each replay. No local-browser stand-in.
+
+| Observed evidence | Buggy base | Fixed head |
+| --- | --- | --- |
+| Screen after clicking | Authorization approved | Authorization approved |
+| API audit count | **0** | **1** |
+| Screenshot | [View](examples/patchproof-ts/evidence/2026-09-05/base/screenshot.png) | [View](examples/patchproof-ts/evidence/2026-09-05/head/screenshot.png) |
+| Recorded browser journey | [Replay data](examples/patchproof-ts/evidence/2026-09-05/base/replay.ndjson) | [Replay data](examples/patchproof-ts/evidence/2026-09-05/head/replay.ndjson) |
+
+![Actual Solari browser screenshot after approval](examples/patchproof-ts/evidence/2026-09-05/head/screenshot.png)
+
+[Read the execution trace and artifact hashes](examples/patchproof-ts/evidence/2026-09-05/REPORT.md).
+Replays retain the DOM and click events; private Solari URLs are redacted before
+hashing. Both sandboxes were destroyed after the checks.
 
 ---
 

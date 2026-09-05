@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
 import { once } from "node:events"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 
@@ -9,6 +12,9 @@ import {
   parseContract,
   readConfig,
   resolveField,
+  run,
+  sanitizeReplay,
+  targetUrl,
   type ProofReport,
 } from "./index.js"
 
@@ -86,7 +92,7 @@ test("resolves a dotted oracle field", () => {
   assert.equal(resolveField({ audit: {} }, "audit.events"), undefined)
 })
 
-test("fixture persists exactly one audit event", async (context) => {
+test("fixture records exactly one in-memory audit event", async (context) => {
   const port = 41_842
   const directory = fileURLToPath(new URL(".", import.meta.url))
   const fixture = spawn(process.execPath, ["fixture/server.mjs"], {
@@ -117,6 +123,47 @@ test("fixture persists exactly one audit event", async (context) => {
 
   fixture.kill()
   await once(fixture, "exit")
+})
+
+test("contract paths cannot escape the checkout or send preview tokens off-origin", async () => {
+  const contract = JSON.parse(await readFile(new URL("patchproof.config.json", import.meta.url), "utf8"))
+  assert.equal(parseContract({ ...contract, workdir: "." }).workdir, ".")
+  for (const workdir of ["..", "../other", "/tmp", "a/../../other"]) {
+    assert.throws(() => parseContract({ ...contract, workdir }), /repository-relative/)
+  }
+  const preview = "https://demo.preview.getsolari.com/?token=test-only"
+  for (const pathname of ["//example.org", "/\\example.org", "/\n/example.org", "https://example.org"]) {
+    assert.throws(() => targetUrl(preview, pathname), /same-origin/)
+    assert.throws(() => parseContract({ ...contract, journey: { ...contract.journey, path: pathname } }), /same-origin/)
+    assert.throws(() => parseContract({
+      ...contract,
+      journey: { ...contract.journey, oracle: { ...contract.journey.oracle, path: pathname } },
+    }), /same-origin/)
+  }
+  assert.equal(targetUrl(preview, "/api/case?view=full"), "https://demo.preview.getsolari.com/api/case?view=full&token=test-only")
+})
+
+test("replay remains valid NDJSON without Solari capabilities", () => {
+  const events = [
+    { type: 4, data: { href: "https://demo.preview.getsolari.com/?token=test-only" } },
+    { type: 2, data: { node: { textContent: "Authorization approved", key: "slr_test_fake_example_only_12345" } } },
+  ]
+  const replay = sanitizeReplay(Buffer.from(events.map((event) => JSON.stringify(event)).join("\n")))
+  const restored = replay.trim().split("\n").map((line) => JSON.parse(line))
+  assert.equal(restored[1].data.node.textContent, "Authorization approved")
+  assert.doesNotMatch(replay, /getsolari\.com|test-only|slr_test_/)
+  assert.throws(() => sanitizeReplay(Buffer.from('{"type":4}')), /no DOM snapshot/)
+})
+
+test("reruns refuse to overwrite or reuse prior evidence", async (context) => {
+  const output = await mkdtemp(path.join(tmpdir(), "patchproof-evidence-test-"))
+  context.after(() => rm(output, { recursive: true, force: true }))
+  const prior = path.join(output, "prior-evidence.txt")
+  await writeFile(prior, "keep this")
+  const config = readConfig(["--repo", "https://github.com/example/app", "--base", base, "--head", head, "--output", output])
+  if (config === "help") assert.fail("expected config")
+  await assert.rejects(run(config, "unused"), /Output directory must be empty/)
+  assert.equal(await readFile(prior, "utf8"), "keep this")
 })
 
 test("formats content-addressed evidence without session capabilities", () => {

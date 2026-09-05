@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "name": "PatchProof",
+  "status": "passed",
+  "repo": "https://github.com/khaledmoayad/solari-cookbook.git",
+  "baseCommit": "ddf6bb3303508d8c981328d3128b22780a1de039",
+  "headCommit": "582715e93c7b14fd012cafeacb515d0d12206d78",
+  "contractPath": "patchproof.config.json",
+  "contractSha256": "a77e7117b5276fdb174cc830a59595df39c8a6fbcf8369c4950aba02961f87d5",
+  "commitsBetween": 1,
+  "journey": "approving a synthetic authorization writes exactly one audit event",
+  "oracle": {
+    "path": "/api/case",
+    "field": "auditEvents",
+    "baseEquals": 0,
+    "headEquals": 1
+  },
+  "startedAt": "2026-09-05T23:20:10.482Z",
+  "finishedAt": "2026-09-05T23:21:00.333Z",
+  "durationMs": 49851,
+  "revisions": [
+    {
+      "label": "base",
+      "requestedCommit": "ddf6bb3303508d8c981328d3128b22780a1de039",
+      "observedCommit": "ddf6bb3303508d8c981328d3128b22780a1de039",
+      "status": "completed",
+      "httpStatus": 200,
+      "pageTitle": "Synthetic claims desk",
+      "visibleTextObserved": true,
+      "oracleExpected": 0,
+      "oracleActual": 0,
+      "oracleMatched": true,
+      "screenshotCaptured": true,
+      "replayCaptured": true,
+      "steps": [
+        {
+          "name": "Create isolated sandbox",
+          "status": "passed",
+          "durationMs": 883
+        },
+        {
+          "name": "Check out immutable commit",
+          "status": "passed",
+          "durationMs": 2087,
+          "detail": "ddf6bb330350"
+        },
+        {
+          "name": "Run setup command",
+          "status": "passed",
+          "durationMs": 220,
+          "detail": "exit 0"
+        },
+        {
+          "name": "Start preview server",
+          "status": "passed",
+          "durationMs": 1125,
+          "detail": "port 3000 ready"
+        },
+        {
+          "name": "Run recorded browser journey",
+          "status": "passed",
+          "durationMs": 10152,
+          "detail": "HTTP 200, visible workflow captured"
+        },
+        {
+          "name": "Read state oracle",
+          "status": "passed",
+          "durationMs": 625,
+          "detail": "auditEvents = 0"
+        },
+        {
+          "name": "Release isolated sandbox",
+          "status": "passed",
+          "durationMs": 438,
+          "detail": "server stopped, sandbox destroyed"
+        },
+        {
+          "name": "Download audit replay",
+          "status": "passed",
+          "durationMs": 7379,
+          "detail": "12,191 bytes"
+        }
+      ],
+      "error": null
+    },
+    {
+      "label": "head",
+      "requestedCommit": "582715e93c7b14fd012cafeacb515d0d12206d78",
+      "observedCommit": "582715e93c7b14fd012cafeacb515d0d12206d78",
+      "status": "completed",
+      "httpStatus": 200,
+      "pageTitle": "Synthetic claims desk",
+      "visibleTextObserved": true,
+      "oracleExpected": 1,
+      "oracleActual": 1,
+      "oracleMatched": true,
+      "screenshotCaptured": true,
+      "replayCaptured": true,
+      "steps": [
+        {
+          "name": "Create isolated sandbox",
+          "status": "passed",
+          "durationMs": 267
+        },
+        {
+          "name": "Check out immutable commit",
+          "status": "passed",
+          "durationMs": 1816,
+          "detail": "582715e93c7b"
+        },
+        {
+          "name": "Run setup command",
+          "status": "passed",
+          "durationMs": 212,
+          "detail": "exit 0"
+        },
+        {
+          "name": "Start preview server",
+          "status": "passed",
+          "durationMs": 1199,
+          "detail": "port 3000 ready"
+        },
+        {
+          "name": "Run recorded browser journey",
+          "status": "passed",
+          "durationMs": 10333,
+          "detail": "HTTP 200, visible workflow captured"
+        },
+        {
+          "name": "Read state oracle",
+          "status": "passed",
+          "durationMs": 616,
+          "detail": "auditEvents = 1"
+        },
+        {
+          "name": "Release isolated sandbox",
+          "status": "passed",
+          "durationMs": 428,
+          "detail": "server stopped, sandbox destroyed"
+        },
+        {
+          "name": "Download audit replay",
+          "status": "passed",
+          "durationMs": 10381,
+          "detail": "12,191 bytes"
+        }
+      ],
+      "error": null
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "base/setup.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "base/app.log",
+      "bytes": 55,
+      "sha256": "101c96e41268c738efb435c4467b164472b7ed10c1e158cc0acc402ae6bc910e"
+    },
+    {
+      "path": "base/screenshot.png",
+      "bytes": 127683,
+      "sha256": "f4afcf9177884aa06d4fc75302ab8ab81541bb9a008fad832f7ed55efbbfbaad"
+    },
+    {
+      "path": "base/replay.ndjson",
+      "bytes": 12191,
+      "sha256": "f839027ce2a7577406333ad6a04098b2cb7fcc8277880471ffcd9946912b4089"
+    },
+    {
+      "path": "head/setup.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "head/app.log",
+      "bytes": 55,
+      "sha256": "101c96e41268c738efb435c4467b164472b7ed10c1e158cc0acc402ae6bc910e"
+    },
+    {
+      "path": "head/screenshot.png",
+      "bytes": 127683,
+      "sha256": "f4afcf9177884aa06d4fc75302ab8ab81541bb9a008fad832f7ed55efbbfbaad"
+    },
+    {
+      "path": "head/replay.ndjson",
+      "bytes": 12191,
+      "sha256": "d1029bbbef03830a6ffaceebed3baacaa8636d47ca5672037a15330ed2d077be"
+    }
+  ],
+  "error": null
+}
